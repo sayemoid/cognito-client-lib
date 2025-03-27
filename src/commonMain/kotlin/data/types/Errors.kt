@@ -1,11 +1,14 @@
 package data.types
 
 import arrow.core.Option
+import arrow.core.getOrElse
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.RedirectResponseException
 import io.ktor.client.plugins.ResponseException
 import io.ktor.client.plugins.ServerResponseException
+import io.ktor.http.HttpStatusCode
 import io.ktor.util.toMap
+import modules.common.models.ErrResponseV2
 
 sealed class Err(val throwable: Throwable) {
 
@@ -30,6 +33,7 @@ sealed class Err(val throwable: Throwable) {
 		Err(RuntimeException("Data doesn't exist"))
 
 	class UserErr(ex: Throwable) : Err(ex)
+
 	sealed class ParseErr(ex: Throwable) : Err(ex) {
 		class JsonParseErr(ex: Throwable) : ParseErr(ex)
 		class DateParseErr(ex: Throwable) : ParseErr(ex)
@@ -40,7 +44,8 @@ sealed class Err(val throwable: Throwable) {
 			ex: Throwable,
 			status: Int,
 			val headers: Map<String, List<String>>,
-			body: Option<T>
+			body: Option<T>,
+			val isAuthErr: Boolean
 		) :
 			HttpErr<T>(ex, status, body)
 
@@ -56,8 +61,12 @@ sealed class Err(val throwable: Throwable) {
 		class ConnectionErr<T>(ex: Throwable, status: Int, body: Option<T>) :
 			HttpErr<T>(ex, status, body)
 
+		class AuthorizationErr<T>(ex: Throwable, status: Int, body: Option<T>) :
+			HttpErr<T>(ex, status, body)
+
 		class HttpJsonParseErr<T>(ex: Throwable, status: Int, body: Option<T>) :
 			HttpErr<T>(ex, status, body)
+
 	}
 
 }
@@ -69,7 +78,12 @@ fun <T> ResponseException.toHttpError(body: Option<T>) =
 		)
 
 		is ClientRequestException -> Err.HttpErr.ClientErr(
-			this, this.response.status.value, this.response.headers.toMap(), body
+			ex = this, this.response.status.value,
+			headers = this.response.headers.toMap(),
+			body = body,
+			isAuthErr = body.map {
+				(it as ErrResponseV2).code == HttpStatusCode.Unauthorized.value
+			}.getOrElse { false }
 		)
 
 		is RedirectResponseException -> Err.HttpErr.RedirectErr(

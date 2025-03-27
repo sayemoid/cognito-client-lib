@@ -2,13 +2,12 @@ package utils.expected
 
 import android.os.Build
 import android.os.Debug
-import org.cognitox.clientlib.BuildConfig
 import java.util.UUID
 
 
 actual fun uuid(): String = UUID.randomUUID().toString()
 
-actual val isDebug = BuildConfig.DEBUG || isEmulator
+actual val isDebug = isEmulator
 
 private val isEmulator: Boolean
 	get() = (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))

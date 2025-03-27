@@ -5,6 +5,8 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.math.min
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 
 fun Instant.toReadableDate(timeZone: TimeZone = TimeZone.currentSystemDefault()): String {
 	val localDate = this.toLocalDateTime(timeZone).date
@@ -38,10 +40,10 @@ fun Instant.toReadableDuration(
 	val mnName = if (short) "m" else "minutes"
 	val sName = if (short) "s" else "seconds"
 	return when {
-		years > 0 -> "$years $yName ${days % 365} $dName"
-		days > 0 -> "$days $dName $hours $hName"
-		hours > 0 -> "$hours $hName $minutes $mnName"
-		else -> "$minutes $mnName $seconds $sName"
+		years > 0 -> "$years$yName ${days % 365}$dName"
+		days > 0 -> "$days$dName $hours$hName"
+		hours > 0 -> "$hours$hName $minutes$mnName"
+		else -> "$minutes$mnName $seconds$sName"
 	}
 }
 
@@ -54,6 +56,28 @@ fun Instant.toHumanReadable(
 	} else {
 		this.toReadableDuration(short = true)
 	}
+}
+
+fun Duration.toHumanReadable(): String {
+	var remaining = this.inWholeSeconds
+
+	val days = remaining / 86400
+	remaining %= 86400
+
+	val hours = remaining / 3600
+	remaining %= 3600
+
+	val minutes = remaining / 60
+	val seconds = remaining % 60
+
+	return listOfNotNull(
+		days.takeIf { it > 0 }?.let { "${it}d" },
+		hours.takeIf { it > 0 }?.let { "${it}h" },
+		minutes.takeIf { it > 0 }?.let { "${it}m" },
+		seconds.takeIf { it > 0 || (days == 0L && hours == 0L && minutes.toInt() == 0) }
+			?.let { "${it}s" }
+	)
+		.joinToString(" ")
 }
 
 fun secondsToTime(seconds: Long): String {

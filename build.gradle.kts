@@ -5,7 +5,7 @@ plugins {
 	alias(libs.plugins.kotlinMultiplatform)
 	alias(libs.plugins.androidLibrary)
 	alias(libs.plugins.serialization)
-	id("module.publication")
+//	id("module.publication")
 }
 
 kotlin {
@@ -43,6 +43,8 @@ kotlin {
 
 				// Serialization
 				api(libs.kotlinx.serialization)
+				// https://mvnrepository.com/artifact/com.soywiz.korlibs.krypto/krypto
+				implementation(libs.krypto)
 				// ktor
 				implementation(libs.ktor)
 				implementation(libs.ktor.client.content.negotiation)

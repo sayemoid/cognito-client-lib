@@ -4,10 +4,14 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import arrow.core.Either
+import arrow.core.getOrElse
 import arrow.core.left
+import arrow.core.none
 import arrow.core.right
+import arrow.core.toOption
 import data.responses.ErrMessage
 import data.responses.ErrTypes
+import data.types.RemoteData
 import filters.HttpFilter
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -25,29 +29,41 @@ import io.ktor.client.request.forms.submitForm
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.parameters
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
-import modules.common.AuthCredentials
 import modules.common.features.auth.models.Auth
 import modules.common.getKoinInstance
 import utils.Tag
 import utils.logD
+import kotlin.time.Duration.Companion.seconds
 
 val authKey = stringPreferencesKey("auth")
+val heartbeatInterval = 10.seconds
 
-suspend fun getAuth(): Either<ErrMessage, Auth> {
+fun loadAuth(): Flow<RemoteData<Auth>> {
 	val dataStore = getKoinInstance<DataStore<Preferences>>()
-	return dataStore.data.map { pref ->
-		pref[authKey]?.let {
-			logD(Tag.Auth.LoadAuthFromStorage, it)
-			Json.decodeFromString<Auth>(it).right()
-		} ?: ErrMessage(
+	return try {
+		dataStore.data.map { pref ->
+			pref[authKey]?.let {
+				logD(Tag.Auth.LoadAuthFromStorage, it)
+				Json.decodeFromString<Auth>(it).right()
+			}.toOption()
+		}
+	} catch (e: Exception) {
+		flow { none<RemoteData<Auth>>() }
+	}
+}
+
+suspend fun getAuth(): Either<ErrMessage, Auth> =
+	loadAuth().first().getOrElse {
+		ErrMessage(
 			ErrTypes.NOT_AUTHENTICATED.type,
 			ErrTypes.NOT_AUTHENTICATED.msg
 		).left()
-	}.first()
-}
+	}
 
 suspend fun HttpClient.cleanupAuth(refreshTokenResponse: HttpResponse? = null) {
 	if (refreshTokenResponse == null) {
@@ -63,7 +79,7 @@ suspend fun HttpClient.cleanupAuth(refreshTokenResponse: HttpResponse? = null) {
 
 expect fun getEngine(): HttpClientEngineFactory<HttpClientEngineConfig>
 
-fun ktorClient(cred: AuthCredentials) = HttpClient(getEngine()) {
+fun ktorClient(cred: OidcAuthenticationFlow) = HttpClient(getEngine()) {
 	expectSuccess = true
 	install(io.ktor.client.plugins.auth.Auth) {
 		bearer {
@@ -72,19 +88,24 @@ fun ktorClient(cred: AuthCredentials) = HttpClient(getEngine()) {
 					{ null },
 					{ BearerTokens(it.accessToken, it.refreshToken) }
 				)
-
 			}
 			refreshTokens {
 				getAuth().fold(
 					{ null },
 					{
 						logD(Tag.Auth.RefreshToken, "Initiating token refresh.")
+						val secret =
+							if (cred is OidcAuthenticationFlow.DirectAccessGrantCredentials) {
+								cred.clientSecret.get()
+							} else {
+								null
+							}
 						val refreshTokenInfo: Auth =
 							refreshToken(
 								client = client,
-								tokenUrl = cred.tokenUrl,
-								clientId = cred.clientId,
-								clientSecret = cred.clientSecret,
+								tokenUrl = cred.tokenEndpoint.get(),
+								clientId = cred.clientId.get(),
+								clientSecret = secret,
 								refreshToken = it.refreshToken
 							) { markAsRefreshTokenRequest() }.body()
 						BearerTokens(
@@ -105,7 +126,9 @@ fun ktorClient(cred: AuthCredentials) = HttpClient(getEngine()) {
 			}
 		)
 	}
-	install(WebSockets)
+	install(WebSockets) {
+		pingInterval = heartbeatInterval.inWholeMilliseconds
+	}
 	install(HttpTimeout)
 }
 
@@ -116,7 +139,7 @@ suspend fun refreshToken(
 	client: HttpClient,
 	tokenUrl: String,
 	clientId: String,
-	clientSecret: String,
+	clientSecret: String?,
 	refreshToken: String,
 	block: HttpRequestBuilder.() -> Unit = {}
 ): HttpResponse = client.submitForm(
@@ -124,8 +147,10 @@ suspend fun refreshToken(
 	formParameters = parameters {
 		append("grant_type", "refresh_token")
 		append("client_id", clientId)
-		append("client_secret", clientSecret)
 		append("refresh_token", refreshToken)
+		clientSecret?.let {
+			append("client_secret", it)
+		}
 	},
 	block = block
 )

@@ -12,6 +12,7 @@ data class ErrMessage(
 	val description: String = "",
 	val actions: Set<ErrActions> = setOf(),
 
+	val isAuthErr: Boolean = false,
 	val mappedMessage: String = if (message.contains("Invalid refresh token (expired):"))
 		"Something wrong with the connection. Please try logout and login to resolve the issue."
 	else messageMapping[message] ?: message,
@@ -31,6 +32,7 @@ enum class ErrActions(val value: String) {
 	 s-err-action : show-upcoming-page
 	 */
 	SHOW_CONNECTION_ERR_DIALOG("show-conn-err-dialog"),
+	LOGOUT("logout"),
 	SHOW_UPCOMING_PAGE("show-upcoming-page"),
 	TRIGGER_OTP_INPUT("trigger-otp-input");
 
@@ -129,7 +131,8 @@ fun Err.toMessage(): ErrMessage = when (this) {
 				type = this::class.simpleName ?: "",
 				message = body.fold({ this.throwable.message ?: "" }, { it.toString() }),
 				statusCode = this.statusCode,
-				description = body.fold({ "" }, { it.toString() })
+				description = body.fold({ "" }, { it.toString() }),
+				isAuthErr = this.isAuthErr
 			)
 
 			is Err.HttpErr.RedirectErr<*> -> ErrMessage(
@@ -164,6 +167,14 @@ fun Err.toMessage(): ErrMessage = when (this) {
 				description = body.fold({ "" }, { it.toString() })
 			)
 
+			is Err.HttpErr.AuthorizationErr<*> -> ErrMessage(
+				actions = setOf(ErrActions.LOGOUT),
+				type = this::class.simpleName ?: "",
+				message = this.throwable.message ?: "",
+				statusCode = this.statusCode,
+				description = body.fold({ "" }, { it.toString() }),
+				isAuthErr = true
+			)
 
 			is Err.HttpErr.ConnectionErr<*> -> ErrMessage(
 				actions = setOf(ErrActions.SHOW_CONNECTION_ERR_DIALOG),
@@ -174,5 +185,4 @@ fun Err.toMessage(): ErrMessage = when (this) {
 			)
 		}
 	}
-
 }

@@ -19,3 +19,4 @@ fun <T> RemoteData<T>.flatten() = this.fold(
 )
 
 fun Option<Boolean>.flatten() = this.fold({ false }, { it })
+fun Option<Boolean>.flattenWithDefault(default: Boolean) = this.fold({ default }, { it })

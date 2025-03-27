@@ -46,18 +46,22 @@ data class PageableParams(
 	val size: Int = 10,
 	val sortBy: SortByFields = SortByFields.ID,
 	val direction: SortDirections = SortDirections.DESC
-){
+) {
 	fun toParamString() = mapOf(
 		"q" to if (this.query == null) "" else this.query.toString(),
 		"page" to this.page,
 		"size" to this.size,
-		"sort_by" to this.sortBy.name,
+		"sort_by" to if (sortBy == SortByFields.ID || sortBy == SortByFields.CREATED_AT) {
+			this.sortBy.name
+		} else {
+			this.sortBy.value
+		},
 		"sort_direction" to this.direction.name
 	).toParamString()
 }
 
-enum class SortByFields {
-	ID, CREATED_AT, SERIAL;
+enum class SortByFields(val value: String) {
+	ID("id"), CREATED_AT("created_at"), SERIAL("serial");
 }
 
 enum class SortDirections {

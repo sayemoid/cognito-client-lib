@@ -6,15 +6,6 @@ import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ErrResponse(
-	val code: Int,
-	val status: String,
-	val message: String
-) {
-	override fun toString(): String = message
-}
-
-@Serializable
 data class ErrResponseV2(
 	val type: ResponseType,
 	val status: HttpStatus,

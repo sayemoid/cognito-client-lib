@@ -8,6 +8,7 @@ import arrow.core.toOption
 import data.Page
 import data.types.Err
 import data.types.toHttpError
+import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ResponseException
 import io.ktor.client.statement.HttpResponse
@@ -41,6 +42,9 @@ suspend inline fun <reified ErrBody, T> result(block: () -> T): Either<Err.HttpE
 			}
 			val authErr = e.response.body<AuthErr>().toErrorResponse()
 			e.toHttpError<ErrBody>((authErr as ErrBody).toOption()).left()
+		} catch (e: NoTransformationFoundException) {
+			logE(Tag.Network.Call, e.toString())
+			Err.HttpErr.AuthorizationErr<ErrBody>(e, -1, none()).left()
 		}
 	} catch (e: JsonConvertException) {
 		if (isDebug) {
@@ -50,7 +54,7 @@ suspend inline fun <reified ErrBody, T> result(block: () -> T): Either<Err.HttpE
 		logE(Tag.Network.JsonParsing, e.toString())
 		Err.HttpErr.HttpJsonParseErr<ErrBody>(e, -1, none()).left()
 	} catch (e: Exception) {
-		logD(Tag.Network.Call, e.toString())
+		logE(Tag.Network.Call, e.toString())
 		Err.HttpErr.ConnectionErr<ErrBody>(e, -1, none()).left()
 	}
 
@@ -85,4 +89,4 @@ data class RemoteResult<T>(
 )
 
 suspend fun ResponseException.isRefreshTokenExpiredError(): Boolean =
-	this.response.body<AuthErr>().description.startsWith("Invalid refresh token (expired)")
+	this.response.body<AuthErr>().isRefreshTokenInvalid()

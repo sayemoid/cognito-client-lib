@@ -5,7 +5,7 @@ plugins {
 	alias(libs.plugins.kotlinMultiplatform)
 	alias(libs.plugins.androidLibrary)
 	alias(libs.plugins.serialization)
-//	id("module.publication")
+	id("module.publication")
 }
 
 kotlin {

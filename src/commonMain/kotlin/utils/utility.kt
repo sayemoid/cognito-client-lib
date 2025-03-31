@@ -33,6 +33,9 @@ fun Map<String, Any?>.toParamString() =
 		}.joinToString("&")
 	}
 
+fun Double.twoDecimalPlaces(): String =
+	formatToTwoDecimalPlaces(this)
+
 fun formatToTwoDecimalPlaces(value: Double): String {
 	val roundedValue = round(value * 100) / 100
 	return roundedValue.toString()

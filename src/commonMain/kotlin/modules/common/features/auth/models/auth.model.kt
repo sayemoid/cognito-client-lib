@@ -122,7 +122,7 @@ data class OidcUser(
 	val gender: String? = null,
 
 	@SerialName("name")
-	val name: String,
+	val name: String? = null,
 
 	@SerialName("preferred_username")
 	val preferredUsername: String,

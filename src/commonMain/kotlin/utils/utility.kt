@@ -1,8 +1,10 @@
 package utils
 
 import arrow.core.Either
+import arrow.core.Some
 import arrow.core.flatMap
 import data.responses.ErrMessage
+import data.types.RemoteData
 import data.types.State
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -75,3 +77,42 @@ fun combineStates(
 }.stateIn(scope, SharingStarted.Lazily, State.Init)
 
 fun Number.percent(number: Number): Double = (this.toDouble() * number.toDouble()) / 100
+
+/**
+ * Combines two RemoteData<T> values using the provided merge function.
+ *
+ * If one of the operands is None, the other is returned.
+ * If both are present (Some) then the Either values are combined:
+ * - If both are Either.Right, the merge function is applied.
+ * - If either one is Either.Left, that error is returned.
+ */
+fun <T> RemoteData<T>.plus(
+	other: RemoteData<T>,
+	merge: (T, T) -> T
+): RemoteData<T> {
+	return this.fold(
+		ifEmpty = {
+			// If this is None, then just return other.
+			other
+		},
+		ifSome = { thisEither ->
+			// Since this is present, now check the other.
+			other.fold(
+				ifEmpty = { this }, // If other is None, simply return this.
+				ifSome = { otherEither ->
+					// Both are available; combine them based on the Either values.
+					val combinedEither = thisEither.fold(
+						ifLeft = { err -> Either.Left(err) },
+						ifRight = { data1 ->
+							otherEither.fold(
+								ifLeft = { err -> Either.Left(err) },
+								ifRight = { data2 -> Either.Right(merge(data1, data2)) }
+							)
+						}
+					)
+					Some(combinedEither)
+				}
+			)
+		}
+	)
+}

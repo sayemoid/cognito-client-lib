@@ -33,6 +33,15 @@ data class Page<T>(
 	}
 }
 
+fun <T> Page<T>.merge(
+	newPage: Page<T>
+): Page<T> {
+	return newPage.copy(
+		content = this.content + newPage.content,
+		numberOfElements = this.numberOfElements + newPage.numberOfElements,
+	)
+}
+
 @Serializable
 data class Sort(
 	val sorted: Boolean,

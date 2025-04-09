@@ -3,21 +3,49 @@ package utils
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.daysUntil
 import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.math.min
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 
-fun Instant.toReadableDate(timeZone: TimeZone = TimeZone.currentSystemDefault()): String {
+data class Period(
+	val from: Instant,
+	val until: Instant
+) {
+	fun string() = if (from.daysUntil(until, TimeZone.currentSystemDefault()) == 0) {
+		this.from.toReadableDate(ignoreYear = true)
+	} else {
+		"${this.from.toReadableDate(ignoreYear = true)} - ${this.until.toReadableDate(ignoreYear = true)}"
+	}
+
+	companion object {
+		val default = Period(
+			from = Instant.fromEpochMilliseconds(0),
+			until = Clock.System.now() + 1.days
+		)
+	}
+}
+
+fun Instant.toReadableDate(
+	timeZone: TimeZone = TimeZone.currentSystemDefault(),
+	ignoreYear: Boolean = false
+): String {
 	val localDate = this.toLocalDateTime(timeZone).date
 	val month = localDate.month.name.lowercase()
 		.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 	val monthShort = month.substring(0, min(3, month.length))
-	return "$monthShort ${localDate.dayOfMonth}, ${localDate.year}"
+	return if (ignoreYear) {
+		"$monthShort ${localDate.dayOfMonth}"
+	} else {
+		"$monthShort ${localDate.dayOfMonth}, ${localDate.year}"
+	}
 }
 
 fun Instant.toReadableTime(
@@ -76,55 +104,64 @@ fun Instant.endOfDay(
 
 fun Instant.startOfMonth(
 	timeZone: TimeZone = TimeZone.currentSystemDefault()
-): Instant = this.toLocalDateTime(timeZone).date
-	.atStartOfDayIn(timeZone)
+): Instant {
+	val localDate = this.toLocalDateTime(timeZone).date
+	val firstDayOfMonth = LocalDate(localDate.year, localDate.monthNumber, 1)
+	return firstDayOfMonth.atStartOfDayIn(timeZone)
+}
 
 fun Instant.endOfMonth(
 	timeZone: TimeZone = TimeZone.currentSystemDefault()
-): Instant = this.toLocalDateTime(timeZone).date
-	.atStartOfDayIn(timeZone)
-	.plus(1.days)
-	.minus(1.milliseconds)
+): Instant {
+	val localDate = this.toLocalDateTime(timeZone).date
+	val firstDayOfMonth = LocalDate(localDate.year, localDate.monthNumber, 1)
+	val startOfNextMonth = firstDayOfMonth.plus(1, DateTimeUnit.MONTH)
+	return startOfNextMonth.atStartOfDayIn(timeZone) - 1.milliseconds
+}
 
 fun Instant.startOfLastMonth(
 	timeZone: TimeZone = TimeZone.currentSystemDefault()
 ): Instant = this.toLocalDateTime(timeZone).date
 	.minus(1, DateTimeUnit.MONTH)
 	.atStartOfDayIn(timeZone)
+	.startOfMonth()
 
 fun Instant.endOfLastMonth(
 	timeZone: TimeZone = TimeZone.currentSystemDefault()
 ): Instant = this.toLocalDateTime(timeZone).date
 	.minus(1, DateTimeUnit.MONTH)
 	.atStartOfDayIn(timeZone)
-	.plus(1.days)
-	.minus(1.milliseconds)
+	.endOfMonth()
 
 fun Instant.startOfYear(
 	timeZone: TimeZone = TimeZone.currentSystemDefault()
-): Instant = this.toLocalDateTime(timeZone).date
-	.atStartOfDayIn(timeZone)
+): Instant {
+	val localDate = this.toLocalDateTime(timeZone).date
+	val startYear = LocalDate(localDate.year, 1, 1)
+	return startYear.atStartOfDayIn(timeZone)
+}
 
 fun Instant.endOfYear(
 	timeZone: TimeZone = TimeZone.currentSystemDefault()
-): Instant = this.toLocalDateTime(timeZone).date
-	.atStartOfDayIn(timeZone)
-	.plus(1.days)
-	.minus(1.milliseconds)
+): Instant {
+	val localDate = this.toLocalDateTime(timeZone).date
+	val startNextYear = LocalDate(localDate.year + 1, 1, 1)
+	return startNextYear.atStartOfDayIn(timeZone) - 1.milliseconds
+}
 
 fun Instant.startOfLastYear(
 	timeZone: TimeZone = TimeZone.currentSystemDefault()
 ): Instant = this.toLocalDateTime(timeZone).date
 	.minus(1, DateTimeUnit.YEAR)
 	.atStartOfDayIn(timeZone)
+	.startOfYear()
 
 fun Instant.endOfLastYear(
 	timeZone: TimeZone = TimeZone.currentSystemDefault()
 ): Instant = this.toLocalDateTime(timeZone).date
 	.minus(1, DateTimeUnit.YEAR)
 	.atStartOfDayIn(timeZone)
-	.plus(1.days)
-	.minus(1.milliseconds)
+	.endOfYear()
 
 fun Duration.toHumanReadable(): String {
 	var remaining = this.inWholeSeconds

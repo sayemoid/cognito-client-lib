@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.Instant
 import kotlin.math.round
+import kotlin.math.roundToInt
 
 fun <T> List<T>.qPop(): List<T> =
 	if (this.isEmpty()) this
@@ -37,6 +38,16 @@ fun Map<String, Any?>.toParamString() =
 
 fun Double.twoDecimalPlaces(): String =
 	formatToTwoDecimalPlaces(this)
+
+fun Double.formatToString(): String {
+	return if (this % 1.0 == 0.0) {
+		this.toInt().toString()
+	} else {
+		val rounded = (this * 100).roundToInt() / 100.0
+		rounded.toString()
+	}
+}
+
 
 fun formatToTwoDecimalPlaces(value: Double): String {
 	val roundedValue = round(value * 100) / 100

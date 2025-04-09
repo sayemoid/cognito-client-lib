@@ -1,12 +1,16 @@
 package utils
 
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.math.min
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
 
 fun Instant.toReadableDate(timeZone: TimeZone = TimeZone.currentSystemDefault()): String {
 	val localDate = this.toLocalDateTime(timeZone).date
@@ -57,6 +61,70 @@ fun Instant.toHumanReadable(
 		this.toReadableDuration(short = true)
 	}
 }
+
+fun Instant.startOfDay(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant = this.toLocalDateTime(timeZone).date
+	.atStartOfDayIn(timeZone)
+
+fun Instant.endOfDay(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant = this.toLocalDateTime(timeZone).date
+	.atStartOfDayIn(timeZone)
+	.plus(1.days)
+	.minus(1.milliseconds)
+
+fun Instant.startOfMonth(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant = this.toLocalDateTime(timeZone).date
+	.atStartOfDayIn(timeZone)
+
+fun Instant.endOfMonth(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant = this.toLocalDateTime(timeZone).date
+	.atStartOfDayIn(timeZone)
+	.plus(1.days)
+	.minus(1.milliseconds)
+
+fun Instant.startOfLastMonth(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant = this.toLocalDateTime(timeZone).date
+	.minus(1, DateTimeUnit.MONTH)
+	.atStartOfDayIn(timeZone)
+
+fun Instant.endOfLastMonth(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant = this.toLocalDateTime(timeZone).date
+	.minus(1, DateTimeUnit.MONTH)
+	.atStartOfDayIn(timeZone)
+	.plus(1.days)
+	.minus(1.milliseconds)
+
+fun Instant.startOfYear(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant = this.toLocalDateTime(timeZone).date
+	.atStartOfDayIn(timeZone)
+
+fun Instant.endOfYear(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant = this.toLocalDateTime(timeZone).date
+	.atStartOfDayIn(timeZone)
+	.plus(1.days)
+	.minus(1.milliseconds)
+
+fun Instant.startOfLastYear(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant = this.toLocalDateTime(timeZone).date
+	.minus(1, DateTimeUnit.YEAR)
+	.atStartOfDayIn(timeZone)
+
+fun Instant.endOfLastYear(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant = this.toLocalDateTime(timeZone).date
+	.minus(1, DateTimeUnit.YEAR)
+	.atStartOfDayIn(timeZone)
+	.plus(1.days)
+	.minus(1.milliseconds)
 
 fun Duration.toHumanReadable(): String {
 	var remaining = this.inWholeSeconds

@@ -20,7 +20,7 @@ data class Period(
 	val until: Instant
 ) {
 	fun string() = if (from.daysUntil(until, TimeZone.currentSystemDefault()) == 0) {
-		this.from.toReadableDate(ignoreYear = true)
+		this.from.toReadableDate(ignoreYear = false)
 	} else {
 		"${this.from.toReadableDate(ignoreYear = true)} - ${this.until.toReadableDate(ignoreYear = true)}"
 	}

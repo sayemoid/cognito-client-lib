@@ -34,6 +34,7 @@ sealed interface Tag {
 	}
 
 	data object General : Tag
+	data object Database : Tag
 	data object Locale : Tag
 	data object Crash : Tag
 	data class Service(val name: String) : Tag {

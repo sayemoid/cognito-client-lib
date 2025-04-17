@@ -26,9 +26,14 @@ data class Period(
 	}
 
 	companion object {
-		val default = Period(
+		val DEFAULT = Period(
 			from = Instant.fromEpochMilliseconds(0),
 			until = Clock.System.now() + 1.days
+		)
+
+		val THIS_MONTH = Period(
+			from = Clock.System.now().startOfMonth(TimeZone.currentSystemDefault()),
+			until = Clock.System.now().endOfMonth(TimeZone.currentSystemDefault())
 		)
 	}
 }

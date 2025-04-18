@@ -1,12 +1,14 @@
 package utils
 
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.daysUntil
+import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
@@ -19,10 +21,31 @@ data class Period(
 	val from: Instant,
 	val until: Instant
 ) {
-	fun string() = if (from.daysUntil(until, TimeZone.currentSystemDefault()) == 0) {
-		this.from.toReadableDate(ignoreYear = false)
+
+	fun string(
+		showAsPeriod: Boolean = true,
+		ignoreYear: Boolean = false
+	) = if (showAsPeriod) {
+		val period = resolvePeriod(this.from, this.until)
+		if (period == Periods.CUSTOM) {
+			"${this.from.toReadableDate(ignoreYear = ignoreYear)} - ${
+				this.until.toReadableDate(
+					ignoreYear = ignoreYear
+				)
+			}"
+		} else {
+			period.label
+		}
 	} else {
-		"${this.from.toReadableDate(ignoreYear = true)} - ${this.until.toReadableDate(ignoreYear = true)}"
+		if (from.daysUntil(until, TimeZone.currentSystemDefault()) == 0) {
+			this.from.toReadableDate(ignoreYear = false)
+		} else {
+			"${this.from.toReadableDate(ignoreYear = ignoreYear)} - ${
+				this.until.toReadableDate(
+					ignoreYear = ignoreYear
+				)
+			}"
+		}
 	}
 
 	companion object {
@@ -37,6 +60,59 @@ data class Period(
 		)
 	}
 }
+
+enum class Periods(val label: String) {
+	TODAY("Today"),
+	YESTERDAY("Yesterday"),
+	LAST_7_DAYS("Last 7 Days"),
+	THIS_WEEK("This Week"),
+	LAST_WEEK("Last Week"),
+	THIS_MONTH("This Month"),
+	LAST_MONTH("Last Month"),
+	THIS_YEAR("This Year"),
+	LAST_YEAR("Last Year"),
+	CUSTOM("Custom")
+}
+
+fun resolvePeriod(
+	from: Instant,
+	until: Instant,
+	now: Instant = Clock.System.now(),
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Periods {
+	val startOfToday = now.startOfDay(timeZone)
+	val endOfToday = now.endOfDay(timeZone)
+	val startOfYesterday = (now - 1.days).startOfDay(timeZone)
+	val endOfYesterday = (now - 1.days).endOfDay(timeZone)
+	val startOfLast7Days = (now - 7.days).startOfDay(timeZone)
+	val endOfLast7Days = now.endOfDay(timeZone)
+	val startOfThisWeek = now.startOfWeek(timeZone)
+	val endOfThisWeek = now.endOfWeek(timeZone)
+	val startOfLastWeek = now.startOfLastWeek(timeZone)
+	val endOfLastWeek = now.endOfLastWeek(timeZone)
+	val startOfThisMonth = now.startOfMonth(timeZone)
+	val endOfThisMonth = now.endOfMonth(timeZone)
+	val startOfLastMonth = now.startOfLastMonth(timeZone)
+	val endOfLastMonth = now.endOfLastMonth(timeZone)
+	val startOfThisYear = now.startOfYear(timeZone)
+	val endOfThisYear = now.endOfYear(timeZone)
+	val startOfLastYear = now.startOfLastYear(timeZone)
+	val endOfLastYear = now.endOfLastYear(timeZone)
+
+	return when {
+		from == startOfToday && until == endOfToday -> Periods.TODAY
+		from == startOfYesterday && until == endOfYesterday -> Periods.YESTERDAY
+		from == startOfLast7Days && until == endOfLast7Days -> Periods.LAST_7_DAYS
+		from == startOfThisWeek && until == endOfThisWeek -> Periods.THIS_WEEK
+		from == startOfLastWeek && until == endOfLastWeek -> Periods.LAST_WEEK
+		from == startOfThisMonth && until == endOfThisMonth -> Periods.THIS_MONTH
+		from == startOfLastMonth && until == endOfLastMonth -> Periods.LAST_MONTH
+		from == startOfThisYear && until == endOfThisYear -> Periods.THIS_YEAR
+		from == startOfLastYear && until == endOfLastYear -> Periods.LAST_YEAR
+		else -> Periods.CUSTOM
+	}
+}
+
 
 fun Instant.toReadableDate(
 	timeZone: TimeZone = TimeZone.currentSystemDefault(),
@@ -106,6 +182,34 @@ fun Instant.endOfDay(
 	.atStartOfDayIn(timeZone)
 	.plus(1.days)
 	.minus(1.milliseconds)
+
+
+fun Instant.startOfWeek(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant {
+	val date = this.toLocalDateTime(timeZone).date
+	val dayOfWeek = date.dayOfWeek.isoDayNumber // Monday = 1, Sunday = 7
+	val monday = date.minus(DatePeriod(days = dayOfWeek - 1))
+	return monday.atStartOfDayIn(timeZone)
+}
+
+fun Instant.endOfWeek(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant {
+	return this.startOfWeek(timeZone).plus(7.days).minus(1.milliseconds)
+}
+
+fun Instant.startOfLastWeek(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant {
+	return this.startOfWeek(timeZone).minus(7.days)
+}
+
+fun Instant.endOfLastWeek(
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant {
+	return this.startOfWeek(timeZone).minus(1.milliseconds)
+}
 
 fun Instant.startOfMonth(
 	timeZone: TimeZone = TimeZone.currentSystemDefault()

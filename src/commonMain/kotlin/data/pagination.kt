@@ -1,6 +1,13 @@
 package data
 
+import kotlinx.datetime.DateTimePeriod
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.periodUntil
 import kotlinx.serialization.Serializable
+import utils.Period
+import utils.Periods
 import utils.toParamString
 
 @Serializable
@@ -41,6 +48,32 @@ fun <T> Page<T>.merge(
 		numberOfElements = this.numberOfElements + newPage.numberOfElements,
 	)
 }
+
+fun <T> Map<LocalDate, Page<T>>.merge(
+	new: Map<LocalDate, Page<T>>
+): Map<LocalDate, Page<T>> =
+	new.entries.fold(this) { acc, (date, newPage) ->
+		acc + (date to (acc[date]?.merge(newPage) ?: newPage))
+	}
+
+fun <T> Map<Periods, Page<T>>.mergeIntoPeriods(
+	new: Map<Periods, Page<T>>,
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Map<Periods, Page<T>> {
+	return new.entries.fold(this) { acc, (newPeriod, newPage) ->
+		// Find an existing period that has the same duration span (from-to match)
+		val matchingPeriod = acc.keys.find {
+			it.from == newPeriod.from && it.until == newPeriod.until
+		}
+
+		if (matchingPeriod != null) {
+			acc + (matchingPeriod to (acc[matchingPeriod]?.merge(newPage) ?: newPage))
+		} else {
+			acc + (newPeriod to newPage)
+		}
+	}
+}
+
 
 @Serializable
 data class Sort(

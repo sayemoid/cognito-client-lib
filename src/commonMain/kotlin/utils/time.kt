@@ -12,6 +12,16 @@ import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
+import utils.Periods.Custom
+import utils.Periods.Last7Days
+import utils.Periods.LastMonth
+import utils.Periods.LastWeek
+import utils.Periods.LastYear
+import utils.Periods.ThisMonth
+import utils.Periods.ThisWeek
+import utils.Periods.ThisYear
+import utils.Periods.Today
+import utils.Periods.Yesterday
 import kotlin.math.min
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -27,7 +37,7 @@ data class Period(
 		ignoreYear: Boolean = false
 	) = if (showAsPeriod) {
 		val period = resolvePeriod(this.from, this.until)
-		if (period == Periods.CUSTOM) {
+		if (period is Custom) {
 			"${this.from.toReadableDate(ignoreYear = ignoreYear)} - ${
 				this.until.toReadableDate(
 					ignoreYear = ignoreYear
@@ -61,7 +71,7 @@ data class Period(
 	}
 }
 
-enum class Periods(val label: String) {
+enum class PeriodsEnum(val label: String) {
 	TODAY("Today"),
 	YESTERDAY("Yesterday"),
 	LAST_7_DAYS("Last 7 Days"),
@@ -72,6 +82,119 @@ enum class Periods(val label: String) {
 	THIS_YEAR("This Year"),
 	LAST_YEAR("Last Year"),
 	CUSTOM("Custom")
+}
+
+sealed class Periods(
+	val label: String,
+	val from: Instant,
+	val until: Instant
+) {
+	companion object {
+		private val now: Instant = Clock.System.now()
+		private val timeZone: TimeZone = TimeZone.currentSystemDefault()
+	}
+
+	fun string(
+		showAsPeriod: Boolean = true,
+		ignoreYear: Boolean = false
+	) = if (showAsPeriod) {
+		val period = resolvePeriod(this.from, this.until)
+		if (period is Custom) {
+			"${this.from.toReadableDate(ignoreYear = ignoreYear)} - ${
+				this.until.toReadableDate(
+					ignoreYear = ignoreYear
+				)
+			}"
+		} else {
+			period.label
+		}
+	} else {
+		if (from.daysUntil(until, TimeZone.currentSystemDefault()) == 0) {
+			this.from.toReadableDate(ignoreYear = false)
+		} else {
+			"${this.from.toReadableDate(ignoreYear = ignoreYear)} - ${
+				this.until.toReadableDate(
+					ignoreYear = ignoreYear
+				)
+			}"
+		}
+	}
+
+	data object Today : Periods(
+		"Today",
+		now.startOfDay(timeZone),
+		now.endOfDay(timeZone)
+	)
+
+	data object Yesterday : Periods(
+		"Yesterday",
+		(now - 1.days).startOfDay(timeZone),
+		(now - 1.days).endOfDay(timeZone)
+	)
+
+	data object Last7Days : Periods(
+		"Last 7 Days",
+		(now - 7.days).startOfDay(timeZone),
+		now.endOfDay(timeZone)
+	)
+
+	data object ThisWeek : Periods(
+		"This Week",
+		now.startOfWeek(timeZone),
+		now.endOfWeek(timeZone)
+	)
+
+	data object LastWeek : Periods(
+		"Last Week",
+		now.startOfLastWeek(timeZone),
+		now.endOfLastWeek(timeZone)
+	)
+
+	data object ThisMonth : Periods(
+		"This Month",
+		now.startOfMonth(timeZone),
+		now.endOfMonth(timeZone)
+	)
+
+	data object LastMonth : Periods(
+		"Last Month",
+		now.startOfLastMonth(timeZone),
+		now.endOfLastMonth(timeZone)
+	)
+
+	data object ThisYear : Periods(
+		"This Year",
+		now.startOfYear(timeZone),
+		now.endOfYear(timeZone)
+	)
+
+	data object LastYear : Periods(
+		"Last Year",
+		now.startOfLastYear(timeZone),
+		now.endOfLastYear(timeZone)
+	)
+
+	class Custom(label: String, from: Instant, until: Instant) : Periods(label, from, until)
+}
+
+/**
+ * Determine which predefined period contains the given instant,
+ * or return a Custom period if none match.
+ */
+fun Instant.period(): Periods {
+	val allPeriods = listOf(
+		Today,
+		Yesterday,
+		Last7Days,
+		ThisWeek,
+		LastWeek,
+		ThisMonth,
+		LastMonth,
+		ThisYear,
+		LastYear
+	)
+	return allPeriods.firstOrNull { this in it.from..it.until }
+		?: Custom("Custom", this, this)
 }
 
 fun resolvePeriod(
@@ -100,34 +223,49 @@ fun resolvePeriod(
 	val endOfLastYear = now.endOfLastYear(timeZone)
 
 	return when {
-		from == startOfToday && until == endOfToday -> Periods.TODAY
-		from == startOfYesterday && until == endOfYesterday -> Periods.YESTERDAY
-		from == startOfLast7Days && until == endOfLast7Days -> Periods.LAST_7_DAYS
-		from == startOfThisWeek && until == endOfThisWeek -> Periods.THIS_WEEK
-		from == startOfLastWeek && until == endOfLastWeek -> Periods.LAST_WEEK
-		from == startOfThisMonth && until == endOfThisMonth -> Periods.THIS_MONTH
-		from == startOfLastMonth && until == endOfLastMonth -> Periods.LAST_MONTH
-		from == startOfThisYear && until == endOfThisYear -> Periods.THIS_YEAR
-		from == startOfLastYear && until == endOfLastYear -> Periods.LAST_YEAR
-		else -> Periods.CUSTOM
+		from == startOfToday && until == endOfToday -> Periods.Today
+		from == startOfYesterday && until == endOfYesterday -> Periods.Yesterday
+		from == startOfLast7Days && until == endOfLast7Days -> Periods.Last7Days
+		from == startOfThisWeek && until == endOfThisWeek -> Periods.ThisWeek
+		from == startOfLastWeek && until == endOfLastWeek -> Periods.LastWeek
+		from == startOfThisMonth && until == endOfThisMonth -> Periods.ThisMonth
+		from == startOfLastMonth && until == endOfLastMonth -> Periods.LastMonth
+		from == startOfThisYear && until == endOfThisYear -> Periods.ThisYear
+		from == startOfLastYear && until == endOfLastYear -> Periods.LastYear
+		else -> Custom("Custom", from, until)
 	}
 }
 
+
+fun LocalDate.toReadable(
+	ignoreYear: Boolean = false,
+	showDayOfWeekName: Boolean = false
+): String {
+	val month = this.month.name.lowercase()
+		.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+	val monthShort = month.substring(0, min(3, month.length))
+	val dayOfWeekName = this.dayOfWeek.name
+		.lowercase()
+		.replaceFirstChar { it.titlecase() }
+	return if (ignoreYear) {
+		if (showDayOfWeekName) {
+			"$dayOfWeekName, $monthShort ${this.dayOfMonth}"
+		} else {
+			"$monthShort ${this.dayOfMonth}"
+		}
+	} else {
+		if (showDayOfWeekName) {
+			"$dayOfWeekName $monthShort ${this.dayOfMonth}, ${this.year}"
+		} else {
+			"$monthShort ${this.dayOfMonth}, ${this.year}"
+		}
+	}
+}
 
 fun Instant.toReadableDate(
 	timeZone: TimeZone = TimeZone.currentSystemDefault(),
 	ignoreYear: Boolean = false
-): String {
-	val localDate = this.toLocalDateTime(timeZone).date
-	val month = localDate.month.name.lowercase()
-		.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-	val monthShort = month.substring(0, min(3, month.length))
-	return if (ignoreYear) {
-		"$monthShort ${localDate.dayOfMonth}"
-	} else {
-		"$monthShort ${localDate.dayOfMonth}, ${localDate.year}"
-	}
-}
+): String = this.toLocalDateTime(timeZone).date.toReadable(ignoreYear)
 
 fun Instant.toReadableTime(
 	timeZone: TimeZone = TimeZone.currentSystemDefault(),

@@ -1,12 +1,8 @@
 package data
 
-import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.periodUntil
 import kotlinx.serialization.Serializable
-import utils.Period
 import utils.Periods
 import utils.toParamString
 
@@ -55,6 +51,9 @@ fun <T> Map<LocalDate, Page<T>>.merge(
 	new.entries.fold(this) { acc, (date, newPage) ->
 		acc + (date to (acc[date]?.merge(newPage) ?: newPage))
 	}
+		.toList()
+		.sortedByDescending { it.first }
+		.toMap()
 
 fun <T> Map<Periods, Page<T>>.mergeIntoPeriods(
 	new: Map<Periods, Page<T>>,

@@ -13,15 +13,6 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import utils.Periods.Custom
-import utils.Periods.Last7Days
-import utils.Periods.LastMonth
-import utils.Periods.LastWeek
-import utils.Periods.LastYear
-import utils.Periods.ThisMonth
-import utils.Periods.ThisWeek
-import utils.Periods.ThisYear
-import utils.Periods.Today
-import utils.Periods.Yesterday
 import kotlin.math.min
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -92,6 +83,17 @@ sealed class Periods(
 	companion object {
 		private val now: Instant = Clock.System.now()
 		private val timeZone: TimeZone = TimeZone.currentSystemDefault()
+		fun filterable() = setOf(
+			Today,
+			Yesterday,
+			Last7Days,
+			ThisWeek,
+			LastWeek,
+			ThisMonth,
+			LastMonth,
+			ThisYear,
+			LastYear
+		)
 	}
 
 	fun string(
@@ -120,58 +122,75 @@ sealed class Periods(
 		}
 	}
 
+	/**
+	 * If this is a Custom whose dates line up exactly with one
+	 * of the predefined [filterable], return that one instead.
+	 * Otherwise just return `this`.
+	 */
+	fun normalize(): Periods {
+		return filterable()
+			.firstOrNull { it.from == this.from && it.until == this.until }
+			?: this
+	}
+
 	data object Today : Periods(
-		"Today",
-		now.startOfDay(timeZone),
-		now.endOfDay(timeZone)
+		label = "Today",
+		from = now.startOfDay(timeZone),
+		until = now.endOfDay(timeZone)
 	)
 
 	data object Yesterday : Periods(
-		"Yesterday",
-		(now - 1.days).startOfDay(timeZone),
-		(now - 1.days).endOfDay(timeZone)
+		label = "Yesterday",
+		from = (now - 1.days).startOfDay(timeZone),
+		until = (now - 1.days).endOfDay(timeZone)
 	)
 
 	data object Last7Days : Periods(
-		"Last 7 Days",
-		(now - 7.days).startOfDay(timeZone),
-		now.endOfDay(timeZone)
+		label = "Last 7 Days",
+		from = (now - 7.days).startOfDay(timeZone),
+		until = now.endOfDay(timeZone)
 	)
 
 	data object ThisWeek : Periods(
-		"This Week",
-		now.startOfWeek(timeZone),
-		now.endOfWeek(timeZone)
+		label = "This Week",
+		from = now.startOfWeek(timeZone),
+		until = now.endOfWeek(timeZone)
 	)
 
 	data object LastWeek : Periods(
-		"Last Week",
-		now.startOfLastWeek(timeZone),
-		now.endOfLastWeek(timeZone)
+		label = "Last Week",
+		from = now.startOfLastWeek(timeZone),
+		until = now.endOfLastWeek(timeZone)
 	)
 
 	data object ThisMonth : Periods(
-		"This Month",
-		now.startOfMonth(timeZone),
-		now.endOfMonth(timeZone)
+		label = "This Month",
+		from = now.startOfMonth(timeZone),
+		until = now.endOfMonth(timeZone)
 	)
 
 	data object LastMonth : Periods(
-		"Last Month",
-		now.startOfLastMonth(timeZone),
-		now.endOfLastMonth(timeZone)
+		label = "Last Month",
+		from = now.startOfLastMonth(timeZone),
+		until = now.endOfLastMonth(timeZone)
 	)
 
 	data object ThisYear : Periods(
-		"This Year",
-		now.startOfYear(timeZone),
-		now.endOfYear(timeZone)
+		label = "This Year",
+		from = now.startOfYear(timeZone),
+		until = now.endOfYear(timeZone)
 	)
 
 	data object LastYear : Periods(
-		"Last Year",
-		now.startOfLastYear(timeZone),
-		now.endOfLastYear(timeZone)
+		label = "Last Year",
+		from = now.startOfLastYear(timeZone),
+		until = now.endOfLastYear(timeZone)
+	)
+
+	data object AllTime : Periods(
+		label = "All Time",
+		from = Instant.fromEpochMilliseconds(0),
+		until = now
 	)
 
 	class Custom(label: String, from: Instant, until: Instant) : Periods(label, from, until)
@@ -182,20 +201,16 @@ sealed class Periods(
  * or return a Custom period if none match.
  */
 fun Instant.period(): Periods {
-	val allPeriods = listOf(
-		Today,
-		Yesterday,
-		Last7Days,
-		ThisWeek,
-		LastWeek,
-		ThisMonth,
-		LastMonth,
-		ThisYear,
-		LastYear
-	)
-	return allPeriods.firstOrNull { this in it.from..it.until }
+	return Periods.filterable().firstOrNull { this in it.from..it.until }
 		?: Custom("Custom", this, this)
 }
+
+fun Periods.copy(
+	label: String = this.label,
+	from: Instant = this.from,
+	until: Instant = this.until
+): Periods = Custom(label, from, until)
+	.normalize()
 
 fun resolvePeriod(
 	from: Instant,

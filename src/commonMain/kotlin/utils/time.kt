@@ -16,8 +16,8 @@ import utils.Period.Custom
 import kotlin.math.min
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.minutes
 
 sealed class Period(
 	open val label: String,
@@ -28,7 +28,7 @@ sealed class Period(
 	abstract val until: Instant
 
 	companion object {
-		private fun now()  = Clock.System.now()
+		private fun now() = Clock.System.now()
 		private val timeZone: TimeZone = TimeZone.currentSystemDefault()
 		fun filterable() = setOf(
 			Today,
@@ -146,7 +146,7 @@ sealed class Period(
 	data object AllTime : Period("All Time") {
 		override val from: Instant = Instant.fromEpochMilliseconds(0)
 		override val until: Instant
-			get() = now().plus(1.minutes)
+			get() = now().plus(1000.hours)
 	}
 
 	data class Custom(

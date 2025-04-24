@@ -12,76 +12,23 @@ import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
-import utils.Periods.Custom
+import utils.Period.Custom
 import kotlin.math.min
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
-data class Period(
-	val from: Instant,
-	val until: Instant
+sealed class Period(
+	open val label: String,
+//	val from: Instant,
+//	val until: Instant
 ) {
-
-	fun string(
-		showAsPeriod: Boolean = true,
-		ignoreYear: Boolean = false
-	) = if (showAsPeriod) {
-		val period = resolvePeriod(this.from, this.until)
-		if (period is Custom) {
-			"${this.from.toReadableDate(ignoreYear = ignoreYear)} - ${
-				this.until.toReadableDate(
-					ignoreYear = ignoreYear
-				)
-			}"
-		} else {
-			period.label
-		}
-	} else {
-		if (from.daysUntil(until, TimeZone.currentSystemDefault()) == 0) {
-			this.from.toReadableDate(ignoreYear = false)
-		} else {
-			"${this.from.toReadableDate(ignoreYear = ignoreYear)} - ${
-				this.until.toReadableDate(
-					ignoreYear = ignoreYear
-				)
-			}"
-		}
-	}
+	abstract val from: Instant
+	abstract val until: Instant
 
 	companion object {
-		val DEFAULT = Period(
-			from = Instant.fromEpochMilliseconds(0),
-			until = Clock.System.now() + 1.days
-		)
-
-		val THIS_MONTH = Period(
-			from = Clock.System.now().startOfMonth(TimeZone.currentSystemDefault()),
-			until = Clock.System.now().endOfMonth(TimeZone.currentSystemDefault())
-		)
-	}
-}
-
-enum class PeriodsEnum(val label: String) {
-	TODAY("Today"),
-	YESTERDAY("Yesterday"),
-	LAST_7_DAYS("Last 7 Days"),
-	THIS_WEEK("This Week"),
-	LAST_WEEK("Last Week"),
-	THIS_MONTH("This Month"),
-	LAST_MONTH("Last Month"),
-	THIS_YEAR("This Year"),
-	LAST_YEAR("Last Year"),
-	CUSTOM("Custom")
-}
-
-sealed class Periods(
-	val label: String,
-	val from: Instant,
-	val until: Instant
-) {
-	companion object {
-		private val now: Instant = Clock.System.now()
+		private fun now()  = Clock.System.now()
 		private val timeZone: TimeZone = TimeZone.currentSystemDefault()
 		fun filterable() = setOf(
 			Today,
@@ -127,89 +74,102 @@ sealed class Periods(
 	 * of the predefined [filterable], return that one instead.
 	 * Otherwise just return `this`.
 	 */
-	fun normalize(): Periods {
+	fun normalize(): Period {
 		return filterable()
 			.firstOrNull { it.from == this.from && it.until == this.until }
 			?: this
 	}
 
-	data object Today : Periods(
-		label = "Today",
-		from = now.startOfDay(timeZone),
-		until = now.endOfDay(timeZone)
-	)
+	data object Today : Period("Today") {
+		override val from: Instant
+			get() = now().startOfDay(timeZone)
+		override val until: Instant
+			get() = now().endOfDay(timeZone)
+	}
 
-	data object Yesterday : Periods(
-		label = "Yesterday",
-		from = (now - 1.days).startOfDay(timeZone),
-		until = (now - 1.days).endOfDay(timeZone)
-	)
+	data object Yesterday : Period("Yesterday") {
+		override val from: Instant
+			get() = (now() - 1.days).startOfDay(timeZone)
+		override val until: Instant
+			get() = (now() - 1.days).endOfDay(timeZone)
+	}
 
-	data object Last7Days : Periods(
-		label = "Last 7 Days",
-		from = (now - 7.days).startOfDay(timeZone),
-		until = now.endOfDay(timeZone)
-	)
+	data object Last7Days : Period("Last 7 Days") {
+		override val from: Instant
+			get() = (now() - 7.days).startOfDay(timeZone)
+		override val until: Instant
+			get() = now().endOfDay(timeZone)
+	}
 
-	data object ThisWeek : Periods(
-		label = "This Week",
-		from = now.startOfWeek(timeZone),
-		until = now.endOfWeek(timeZone)
-	)
+	data object ThisWeek : Period("This Week") {
+		override val from: Instant
+			get() = now().startOfWeek(timeZone)
+		override val until: Instant
+			get() = now().endOfWeek(timeZone)
+	}
 
-	data object LastWeek : Periods(
-		label = "Last Week",
-		from = now.startOfLastWeek(timeZone),
-		until = now.endOfLastWeek(timeZone)
-	)
+	data object LastWeek : Period("Last Week") {
+		override val from: Instant
+			get() = now().startOfLastWeek(timeZone)
+		override val until: Instant
+			get() = now().endOfLastWeek(timeZone)
+	}
 
-	data object ThisMonth : Periods(
-		label = "This Month",
-		from = now.startOfMonth(timeZone),
-		until = now.endOfMonth(timeZone)
-	)
+	data object ThisMonth : Period("This Month") {
+		override val from: Instant
+			get() = now().startOfMonth(timeZone)
+		override val until: Instant
+			get() = now().endOfMonth(timeZone)
+	}
 
-	data object LastMonth : Periods(
-		label = "Last Month",
-		from = now.startOfLastMonth(timeZone),
-		until = now.endOfLastMonth(timeZone)
-	)
+	data object LastMonth : Period("Last Month") {
+		override val from: Instant
+			get() = now().startOfLastMonth(timeZone)
+		override val until: Instant
+			get() = now().endOfLastMonth(timeZone)
+	}
 
-	data object ThisYear : Periods(
-		label = "This Year",
-		from = now.startOfYear(timeZone),
-		until = now.endOfYear(timeZone)
-	)
+	data object ThisYear : Period("This Year") {
+		override val from: Instant
+			get() = now().startOfYear(timeZone)
+		override val until: Instant
+			get() = now().endOfYear(timeZone)
+	}
 
-	data object LastYear : Periods(
-		label = "Last Year",
-		from = now.startOfLastYear(timeZone),
-		until = now.endOfLastYear(timeZone)
-	)
+	data object LastYear : Period("Last Year") {
+		override val from: Instant
+			get() = now().startOfLastYear(timeZone)
+		override val until: Instant
+			get() = now().endOfLastYear(timeZone)
+	}
 
-	data object AllTime : Periods(
-		label = "All Time",
-		from = Instant.fromEpochMilliseconds(0),
-		until = now
-	)
+	data object AllTime : Period("All Time") {
+		override val from: Instant = Instant.fromEpochMilliseconds(0)
+		override val until: Instant
+			get() = now().plus(1.minutes)
+	}
 
-	class Custom(label: String, from: Instant, until: Instant) : Periods(label, from, until)
+	data class Custom(
+		override val label: String,
+		override val from: Instant,
+		override val until: Instant
+	) : Period(label)
 }
 
 /**
  * Determine which predefined period contains the given instant,
  * or return a Custom period if none match.
  */
-fun Instant.period(): Periods {
-	return Periods.filterable().firstOrNull { this in it.from..it.until }
+fun Instant.period(): Period {
+	return Period.filterable().firstOrNull { this in it.from..it.until }
 		?: Custom("Custom", this, this)
 }
 
-fun Periods.copy(
+fun Period.copy(
 	label: String = this.label,
 	from: Instant = this.from,
 	until: Instant = this.until
-): Periods = Custom(label, from, until)
+): Period = Custom(label, from, until)
 	.normalize()
 
 fun resolvePeriod(
@@ -217,7 +177,7 @@ fun resolvePeriod(
 	until: Instant,
 	now: Instant = Clock.System.now(),
 	timeZone: TimeZone = TimeZone.currentSystemDefault()
-): Periods {
+): Period {
 	val startOfToday = now.startOfDay(timeZone)
 	val endOfToday = now.endOfDay(timeZone)
 	val startOfYesterday = (now - 1.days).startOfDay(timeZone)
@@ -238,15 +198,15 @@ fun resolvePeriod(
 	val endOfLastYear = now.endOfLastYear(timeZone)
 
 	return when {
-		from == startOfToday && until == endOfToday -> Periods.Today
-		from == startOfYesterday && until == endOfYesterday -> Periods.Yesterday
-		from == startOfLast7Days && until == endOfLast7Days -> Periods.Last7Days
-		from == startOfThisWeek && until == endOfThisWeek -> Periods.ThisWeek
-		from == startOfLastWeek && until == endOfLastWeek -> Periods.LastWeek
-		from == startOfThisMonth && until == endOfThisMonth -> Periods.ThisMonth
-		from == startOfLastMonth && until == endOfLastMonth -> Periods.LastMonth
-		from == startOfThisYear && until == endOfThisYear -> Periods.ThisYear
-		from == startOfLastYear && until == endOfLastYear -> Periods.LastYear
+		from == startOfToday && until == endOfToday -> Period.Today
+		from == startOfYesterday && until == endOfYesterday -> Period.Yesterday
+		from == startOfLast7Days && until == endOfLast7Days -> Period.Last7Days
+		from == startOfThisWeek && until == endOfThisWeek -> Period.ThisWeek
+		from == startOfLastWeek && until == endOfLastWeek -> Period.LastWeek
+		from == startOfThisMonth && until == endOfThisMonth -> Period.ThisMonth
+		from == startOfLastMonth && until == endOfLastMonth -> Period.LastMonth
+		from == startOfThisYear && until == endOfThisYear -> Period.ThisYear
+		from == startOfLastYear && until == endOfLastYear -> Period.LastYear
 		else -> Custom("Custom", from, until)
 	}
 }

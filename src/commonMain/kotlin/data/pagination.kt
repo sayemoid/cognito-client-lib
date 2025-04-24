@@ -3,7 +3,7 @@ package data
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.serialization.Serializable
-import utils.Periods
+import utils.Period
 import utils.toParamString
 
 @Serializable
@@ -55,10 +55,10 @@ fun <T> Map<LocalDate, Page<T>>.merge(
 		.sortedByDescending { it.first }
 		.toMap()
 
-fun <T> Map<Periods, Page<T>>.mergeIntoPeriods(
-	new: Map<Periods, Page<T>>,
+fun <T> Map<Period, Page<T>>.mergeIntoPeriods(
+	new: Map<Period, Page<T>>,
 	timeZone: TimeZone = TimeZone.currentSystemDefault()
-): Map<Periods, Page<T>> {
+): Map<Period, Page<T>> {
 	return new.entries.fold(this) { acc, (newPeriod, newPage) ->
 		// Find an existing period that has the same duration span (from-to match)
 		val matchingPeriod = acc.keys.find {

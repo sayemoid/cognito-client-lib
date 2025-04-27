@@ -7,10 +7,12 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.atTime
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import utils.Period.Custom
 import kotlin.math.min
@@ -384,6 +386,17 @@ fun Instant.endOfLastYear(
 	.minus(1, DateTimeUnit.YEAR)
 	.atStartOfDayIn(timeZone)
 	.endOfYear()
+
+fun Instant.minus(
+	period: DatePeriod,
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Instant = this.toLocalDateTime(timeZone)
+	.let {
+		it.date
+			.minus(period)
+			.atTime(it.time)
+			.toInstant(timeZone)
+	}
 
 fun Duration.toHumanReadable(): String {
 	var remaining = this.inWholeSeconds

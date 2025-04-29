@@ -15,6 +15,7 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import utils.Period.Custom
+import kotlin.math.abs
 import kotlin.math.min
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -166,6 +167,17 @@ fun Instant.period(): Period {
 	return Period.filterable().firstOrNull { this in it.from..it.until }
 		?: Custom("Custom", this, this)
 }
+
+fun Instant.isSameDay(
+	instant: Instant,
+	timeZone: TimeZone = TimeZone.currentSystemDefault()
+): Boolean {
+	val thisDate = this.toLocalDateTime(timeZone).date
+	val otherDate = instant.toLocalDateTime(timeZone).date
+	return thisDate.year == otherDate.year && thisDate.monthNumber == otherDate.monthNumber && thisDate.dayOfMonth == otherDate.dayOfMonth
+}
+
+fun Instant.isSameMinute(time: Instant) = abs(this.epochSeconds - time.epochSeconds) < 60
 
 fun Period.copy(
 	label: String = this.label,

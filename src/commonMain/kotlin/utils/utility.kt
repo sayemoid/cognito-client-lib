@@ -7,10 +7,12 @@ import data.responses.ErrMessage
 import data.types.RemoteData
 import data.types.State
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.Instant
 import kotlin.math.round
 import kotlin.math.roundToInt
@@ -97,33 +99,35 @@ fun Number.percent(number: Number): Double = (this.toDouble() * number.toDouble(
  * - If both are Either.Right, the merge function is applied.
  * - If either one is Either.Left, that error is returned.
  */
-fun <T> RemoteData<T>.plus(
+suspend fun <T> RemoteData<T>.plus(
 	other: RemoteData<T>,
 	merge: (T, T) -> T
-): RemoteData<T> {
-	return this.fold(
-		ifEmpty = {
-			// If this is None, then just return other.
-			other
-		},
-		ifSome = { thisEither ->
-			// Since this is present, now check the other.
-			other.fold(
-				ifEmpty = { this }, // If other is None, simply return this.
-				ifSome = { otherEither ->
-					// Both are available; combine them based on the Either values.
-					val combinedEither = thisEither.fold(
-						ifLeft = { err -> Either.Left(err) },
-						ifRight = { data1 ->
-							otherEither.fold(
-								ifLeft = { err -> Either.Left(err) },
-								ifRight = { data2 -> Either.Right(merge(data1, data2)) }
-							)
-						}
-					)
-					Some(combinedEither)
-				}
-			)
-		}
-	)
+): RemoteData<T> = this.let { first->
+	withContext(Dispatchers.Default){
+		first.fold(
+			ifEmpty = {
+				// If this is None, then just return other.
+				other
+			},
+			ifSome = { thisEither ->
+				// Since this is present, now check the other.
+				other.fold(
+					ifEmpty = { first }, // If other is None, simply return this.
+					ifSome = { otherEither ->
+						// Both are available; combine them based on the Either values.
+						val combinedEither = thisEither.fold(
+							ifLeft = { err -> Either.Left(err) },
+							ifRight = { data1 ->
+								otherEither.fold(
+									ifLeft = { err -> Either.Left(err) },
+									ifRight = { data2 -> Either.Right(merge(data1, data2)) }
+								)
+							}
+						)
+						Some(combinedEither)
+					}
+				)
+			}
+		)
+	}
 }

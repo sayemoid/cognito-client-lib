@@ -38,12 +38,11 @@ data class Page<T>(
 
 fun <T> Page<T>.merge(
 	newPage: Page<T>
-): Page<T> {
-	return newPage.copy(
-		content = this.content + newPage.content,
-		numberOfElements = this.numberOfElements + newPage.numberOfElements,
-	)
-}
+): Page<T> = newPage.copy(
+	content = this.content + newPage.content,
+	numberOfElements = this.numberOfElements + newPage.numberOfElements,
+)
+
 
 fun <T> Map<LocalDate, Page<T>>.merge(
 	new: Map<LocalDate, Page<T>>

@@ -159,6 +159,12 @@ sealed class Period(
 	) : Period(label)
 }
 
+fun Instant.toZonedString(timeZone: TimeZone = TimeZone.currentSystemDefault()): String {
+	val localDateTime = this.toLocalDateTime(timeZone)
+	return "${localDateTime}[${timeZone.id}]"
+}
+
+
 /**
  * Determine which predefined period contains the given instant,
  * or return a Custom period if none match.

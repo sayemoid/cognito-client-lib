@@ -51,7 +51,7 @@ sealed interface Tag {
 
 }
 
-fun logD(tag: Tag, msg: String, throwable: Throwable? = null) {
+fun logD(tag: Tag = Tag.General, msg: String, throwable: Throwable? = null) {
 	if (isDebug) Logger.d(msg, throwable, tag::class.simpleName ?: "")
 }
 

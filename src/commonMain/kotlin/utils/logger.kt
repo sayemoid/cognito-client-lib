@@ -42,6 +42,7 @@ sealed interface Tag {
 	}
 
 	data object BroadcastReceiver : Tag
+	data object Ads : Tag
 
 	sealed class Event(val name: String) : Tag {
 		data object Select : Event("select_item")

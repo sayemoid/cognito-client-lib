@@ -14,8 +14,13 @@ import io.ktor.client.plugins.ResponseException
 import io.ktor.client.statement.HttpResponse
 import io.ktor.serialization.JsonConvertException
 import io.ktor.util.toMap
+import kotlinx.datetime.Clock
 import modules.common.features.auth.models.AuthErr
+import modules.common.models.ErrData
+import modules.common.models.ErrResponseV2
+import modules.common.models.HttpStatus
 import modules.common.models.ResponseData
+import modules.common.models.ResponseType
 import utils.expected.isDebug
 
 suspend inline fun <reified ErrBody, T> resultPaginated(block: () -> Page<T>): Either<Err.HttpErr<ErrBody>, Page<T>> =
@@ -38,9 +43,13 @@ suspend inline fun <reified ErrBody, T> result(block: () -> T): Either<Err.HttpE
 			 */
 			if (isDebug && !e.isRefreshTokenExpiredError()) {
 				logE(Tag.Network.JsonParsing, e.message ?: "")
-				throw ne
 			}
-			val authErr = e.response.body<AuthErr>().toErrorResponse()
+			val authErr = try {
+				e.response.body<AuthErr>().toErrorResponse()
+			} catch (e: JsonConvertException) {
+				// If the error is not a valid AuthErr, we can just return the original exception
+				e.toErrResponse()
+			}
 			e.toHttpError<ErrBody>((authErr as ErrBody).toOption()).left()
 		} catch (e: NoTransformationFoundException) {
 			logE(Tag.Network.Call, e.toString())
@@ -89,4 +98,22 @@ data class RemoteResult<T>(
 )
 
 suspend fun ResponseException.isRefreshTokenExpiredError(): Boolean =
-	this.response.body<AuthErr>().isRefreshTokenInvalid()
+	try {
+		this.response.body<AuthErr>().isRefreshTokenInvalid()
+	} catch (e: JsonConvertException) {
+		false
+	}
+
+fun JsonConvertException.toErrResponse(): ErrResponseV2 = ErrResponseV2(
+	type = ResponseType.ERROR,
+	status = HttpStatus.FORBIDDEN,
+	code = HttpStatus.FORBIDDEN.value,
+	time = Clock.System.now(),
+	error = ErrData(
+		type = "Error",
+		status = HttpStatus.FORBIDDEN,
+		message = this.message ?: "",
+		description = this.message ?: "",
+		actions = setOf()
+	)
+)

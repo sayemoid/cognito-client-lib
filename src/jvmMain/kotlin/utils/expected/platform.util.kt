@@ -7,3 +7,5 @@ actual fun uuid(): String = UUID.randomUUID().toString()
 actual val isDebug = true
 
 actual fun platform(): Platforms = Platforms.JVM
+
+

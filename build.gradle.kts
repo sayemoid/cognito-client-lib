@@ -5,7 +5,16 @@ plugins {
 	alias(libs.plugins.kotlinMultiplatform)
 	alias(libs.plugins.androidLibrary)
 	alias(libs.plugins.serialization)
+	id("com.github.gmazzo.buildconfig") version "5.6.7"
 //	id("module.publication")
+}
+
+buildConfig {
+	packageName("org.cognitox.clientlib")
+	className("BuildKonfig")
+	buildConfigField("String", "APP_NAME", "\"${project.property("app.name")}\"")
+	buildConfigField("String", "VERSION_NAME", "\"${project.property("app.versionName")}\"")
+	buildConfigField("String", "VERSION_CODE", "\"${project.property("app.versionCode")}\"")
 }
 
 kotlin {

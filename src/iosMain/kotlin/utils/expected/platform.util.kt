@@ -9,3 +9,4 @@ actual fun uuid(): String = NSUUID().UUIDString()
 actual val isDebug = Platform.isDebugBinary
 
 actual fun platform(): Platforms = Platforms.IOS
+

@@ -104,9 +104,9 @@ kotlin {
 
 android {
 	namespace = "org.cognitox.clientlib"
-	compileSdk = libs.versions.android.compileSdk.get().toInt()
+	compileSdk = project.property("android.compileSdk")?.toString()?.toInt()
 	defaultConfig {
-		minSdk = libs.versions.android.minSdk.get().toInt()
+		minSdk = project.property("android.minSdk")?.toString()?.toInt()
 	}
 	buildFeatures {
 		buildConfig = true

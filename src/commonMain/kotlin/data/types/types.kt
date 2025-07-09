@@ -18,6 +18,12 @@ fun <T> RemoteData<T>.flatten() = this.fold(
 	}
 )
 
+fun <L, R> Either<L, R>.getOrThrow(): R =
+	when (this) {
+		is Either.Left -> throw Exception(this.value.toString())
+		is Either.Right -> this.value
+	}
+
 fun Option<Boolean>.flatten() = this.fold({ false }, { it })
 
 fun Option<Int>.flatten(default: Int = 0): Int = this.fold({ default }, { it })

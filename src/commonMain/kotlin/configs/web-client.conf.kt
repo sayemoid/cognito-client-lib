@@ -4,9 +4,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import arrow.core.Either
+import arrow.core.Some
 import arrow.core.getOrElse
 import arrow.core.left
-import arrow.core.none
 import arrow.core.right
 import arrow.core.toOption
 import data.responses.ErrMessage
@@ -30,8 +30,8 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.parameters
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import modules.common.features.auth.models.Auth
@@ -43,18 +43,26 @@ import kotlin.time.Duration.Companion.seconds
 val authKey = stringPreferencesKey("auth")
 val heartbeatInterval = 10.seconds
 
-fun loadAuth(): Flow<RemoteData<Auth>> {
+fun loadAuth(): Flow<RemoteData<Auth>> { // Flow<Option<Either<ErrMessage, Auth>>>
 	val dataStore = getKoinInstance<DataStore<Preferences>>()
-	return try {
-		dataStore.data.map { pref ->
-			pref[authKey]?.let {
-				logD(Tag.Auth.LoadAuthFromStorage, it)
-				Json.decodeFromString<Auth>(it).right()
-			}.toOption()
+
+	return dataStore.data
+		.map { pref ->
+			pref[authKey]?.let { jsonString ->
+				// If the key exists, try to decode it
+				Json.decodeFromString<Auth>(jsonString).right()
+			}.toOption() // Creates Some(Either.Right) or None
 		}
-	} catch (e: Exception) {
-		flow { none<RemoteData<Auth>>() }
-	}
+		.catch { e ->
+			// If any exception happens above (e.g., JSON parsing error),
+			// catch it and emit a `Some` containing an `Either.Left`.
+			val errorMessage = ErrMessage(
+				"STORAGE_ERROR",
+				e.message ?: "Failed to load auth from storage"
+			)
+			// The error is now correctly captured and propagated
+			Some(errorMessage.left())
+		}
 }
 
 suspend fun getAuth(): Either<ErrMessage, Auth> =

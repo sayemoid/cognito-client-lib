@@ -5,7 +5,7 @@ plugins {
 	alias(libs.plugins.kotlinMultiplatform)
 	alias(libs.plugins.androidLibrary)
 	alias(libs.plugins.serialization)
-	id("com.github.gmazzo.buildconfig") version "5.6.7"
+	id("com.github.gmazzo.buildconfig") version "6.0.7"
 //	id("module.publication")
 }
 

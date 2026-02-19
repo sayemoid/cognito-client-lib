@@ -13,6 +13,7 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.ResponseException
 import io.ktor.client.statement.HttpResponse
 import io.ktor.serialization.JsonConvertException
+import io.ktor.util.network.UnresolvedAddressException
 import io.ktor.util.toMap
 import kotlinx.datetime.Clock
 import modules.common.features.auth.models.AuthErr
@@ -63,8 +64,23 @@ suspend inline fun <reified ErrBody, T> result(block: () -> T): Either<Err.HttpE
 		logE(Tag.Network.JsonParsing, e.toString())
 		Err.HttpErr.HttpJsonParseErr<ErrBody>(e, -1, none()).left()
 	} catch (e: Exception) {
-		logE(Tag.Network.Call, e.toString())
-		Err.HttpErr.ConnectionErr<ErrBody>(e, -1, none()).left()
+		when (e.cause) {
+			is UnresolvedAddressException -> {
+				logE(Tag.Network.Call, e.toString())
+				Err.HttpErr.ConnectionErr<ErrBody>(e, -1, none()).left()
+			}
+
+			else -> {
+				if (e.message?.contains("Unable to resolve host") ?: false) {
+					logE(Tag.Network.Call, e.toString())
+					Err.HttpErr.ConnectionErr<ErrBody>(e, -1, none()).left()
+				} else {
+					logE(Tag.Network.Call, e.toString())
+					Err.HttpErr.ServerErr<ErrBody>(e, -1, none()).left()
+				}
+			}
+		}
+
 	}
 
 suspend inline fun <reified ErrBody, reified T> resultSingleWithHeaders(block: () -> HttpResponse): Either<Err.HttpErr<ErrBody>, RemoteResult<T>> =

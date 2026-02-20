@@ -1,6 +1,5 @@
 package configs
 
-import io.ktor.utils.io.core.EOFException
 import io.ktor.utils.io.errors.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

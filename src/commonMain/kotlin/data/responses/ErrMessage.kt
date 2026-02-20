@@ -20,7 +20,11 @@ data class ErrMessage(
 	val mappedDescription: String = if (description.contains("Invalid refresh token (expired):"))
 		"Something wrong with the connection. Please try logout and login to resolve the issue."
 	else messageMapping[description] ?: description
-)
+){
+	val isInternalServerError = statusCode == 500
+	val isGatewayError = statusCode == 502 || statusCode == 503 || statusCode == 504
+
+}
 
 val messageMapping = mapOf(
 	"invalid_grant : Bad credentials" to "Wrong username or password"

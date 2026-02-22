@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
 	alias(libs.plugins.kotlinMultiplatform)
-	alias(libs.plugins.androidLibrary)
+	alias(libs.plugins.androidMultiplatformLibrary)
 	alias(libs.plugins.serialization)
 	id("com.github.gmazzo.buildconfig") version "6.0.7"
 //	id("module.publication")
@@ -26,12 +26,10 @@ kotlin {
 			jvmTarget.set(JvmTarget.JVM_17)
 		}
 	}
-	androidTarget {
-		publishLibraryVariants("release")
-		@OptIn(ExperimentalKotlinGradlePluginApi::class)
-		compilerOptions {
-			jvmTarget.set(JvmTarget.JVM_17)
-		}
+	androidLibrary {
+		namespace = "org.cognitox.clientlib"
+		compileSdk = project.property("android.compileSdk")?.toString()?.toInt()
+		minSdk = project.property("android.minSdk")?.toString()?.toInt()
 	}
 	iosX64()
 	iosArm64()
@@ -100,18 +98,6 @@ kotlin {
 //			}
 //		}
 	}
-}
-
-android {
-	namespace = "org.cognitox.clientlib"
-	compileSdk = project.property("android.compileSdk")?.toString()?.toInt()
-	defaultConfig {
-		minSdk = project.property("android.minSdk")?.toString()?.toInt()
-	}
-	buildFeatures {
-		buildConfig = true
-	}
-	kotlin {
-		jvmToolchain(libs.versions.jdk.get().toInt())
-	}
+	
+	jvmToolchain(libs.versions.jdk.get().toInt())
 }

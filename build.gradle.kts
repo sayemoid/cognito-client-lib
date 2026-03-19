@@ -98,6 +98,4 @@ kotlin {
 //			}
 //		}
 	}
-	
-	jvmToolchain(libs.versions.jdk.get().toInt())
 }

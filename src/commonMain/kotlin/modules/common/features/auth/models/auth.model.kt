@@ -3,8 +3,8 @@ package modules.common.features.auth.models
 import arrow.core.Option
 import arrow.core.toOption
 import data.types.CountryCodes
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

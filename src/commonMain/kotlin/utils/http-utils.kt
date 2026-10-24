@@ -15,7 +15,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.serialization.JsonConvertException
 import io.ktor.util.network.UnresolvedAddressException
 import io.ktor.util.toMap
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import modules.common.features.auth.models.AuthErr
 import modules.common.models.ErrData
 import modules.common.models.ErrResponseV2

@@ -1,8 +1,8 @@
 package modules.common.models
 
 import data.responses.ErrMessage
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlinx.serialization.Serializable
 
 enum class ResponseType {
